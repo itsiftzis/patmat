@@ -1,5 +1,5 @@
-val test = 1
-val testList = List[Int](1,2,3,4)
-testList.tail
-testList.head
-testList :: 4
+import patmat.Huffman._
+val sampleTree = makeCodeTree(
+  makeCodeTree(Leaf('x', 1), Leaf('e', 1)),
+  Leaf('t', 2)
+)
