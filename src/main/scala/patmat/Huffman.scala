@@ -169,25 +169,29 @@ object Huffman {
    */
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
 
-    def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = {
-      if (innerBits.isEmpty)
-        acc
-      else {
-        if (innerTree.isInstanceOf[Fork]) {
-          val left = innerTree.asInstanceOf[Fork].left
-          val right = innerTree.asInstanceOf[Fork].right
+      def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = {
+        if (innerBits.isEmpty)
+          acc
+        else if (innerTree.isInstanceOf[Leaf]) {
+          loop(tree, innerBits, acc :+ innerTree.asInstanceOf[Leaf].char)
+        }
+        else {
+          if (innerBits.head == 0) {
+            if (innerBits.size >= 2)
+              loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc)
+            else
+              loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc :+ innerTree.asInstanceOf[Fork].left.asInstanceOf[Leaf].char)
 
-          if (innerBits.head == 1)
-            loop(right, innerBits, acc)
-          else
-            loop(left, innerBits, acc)
+          } else {
+              if (innerBits.size >=2)
+                loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc)
+              else
+                loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc :+ innerTree.asInstanceOf[Fork].right.asInstanceOf[Leaf].char)
 
-        } else {
-          loop(tree, innerBits.tail, acc :+ innerTree.asInstanceOf[Leaf].char)
+          }
         }
       }
-    }
-    loop(tree, bits, List[Char]())
+      loop(tree, bits, List[Char]())
   }
 
   /**
