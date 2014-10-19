@@ -170,12 +170,21 @@ object Huffman {
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
 
     def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = {
-      if (innerTree.isInstanceOf[Fork]) {
-        if (innerBits.head == 1) loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc)
-        else loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc)
-      } else {
-        if (innerBits.isEmpty) innerTree.asInstanceOf[Leaf].char :: acc
-        else loop(tree, innerBits, innerTree.asInstanceOf[Leaf].char :: acc)
+      if (innerBits.isEmpty)
+        acc
+      else {
+        if (innerTree.isInstanceOf[Fork]) {
+          val left = innerTree.asInstanceOf[Fork].left
+          val right = innerTree.asInstanceOf[Fork].right
+
+          if (innerBits.head == 1)
+            loop(right, innerBits, acc)
+          else
+            loop(left, innerBits, acc)
+
+        } else {
+          loop(tree, innerBits.tail, acc :+ innerTree.asInstanceOf[Leaf].char)
+        }
       }
     }
     loop(tree, bits, List[Char]())
@@ -219,27 +228,26 @@ object Huffman {
           val left = tree.asInstanceOf[Fork].left
           val right = tree.asInstanceOf[Fork].right
 
-          if (left.isInstanceOf[Leaf] && left.asInstanceOf[Leaf].char == chars.head) {
-            println("found in left leaf " + chars.head)
-            loop(tree, chars.tail, 0 :: charList)
-          }
-          else if (left.isInstanceOf[Fork] && left.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
-            println("found in left fork " + chars.head)
-            loop(left.asInstanceOf[Fork].left, chars.tail, 0 :: charList)
-          }
-          else if (right.isInstanceOf[Leaf] && right.asInstanceOf[Leaf].char == chars.head) {
-            println("found in right leaf " + chars.head)
-            loop(tree, chars.tail, 1 :: charList)
-          }
-          else {
-            println("found in right fork" + chars.head)
-            loop(right.asInstanceOf[Fork], chars.tail, 1 :: charList)
+          if (left.isInstanceOf[Fork]) {
+            if (left.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
+              loop(left, chars, charList :+ 0)
+            } else {
+              loop(right, chars, charList :+ 1)
+            }
+          } else if (right.isInstanceOf[Fork]) {
+            if (right.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
+              loop(right, chars, charList :+ 1)
+            } else {
+              loop(left, chars, charList :+ 0)
+            }
+          } else {
+              if (left.asInstanceOf[Leaf].char == chars.head) loop(tree, chars.tail, charList :+ 0)
+              else loop(tree, chars.tail, charList :+ 1)
           }
         } else {
-          println("found in last leaf " + chars.head)
           loop(tree, chars.tail, charList)
         }
-    }
+      }
     }
     loop(tree, text, List[Bit]())
   }
