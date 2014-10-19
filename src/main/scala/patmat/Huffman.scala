@@ -117,22 +117,11 @@ object Huffman {
    */
   def combine(trees: List[CodeTree]): List[CodeTree] = {
 
-    def insert(cd: CodeTree, cdl: List[CodeTree]): List[CodeTree] = cdl match {
-      case List() => List(cd)
-      case y :: ys => if (weight(cd) <= weight(y)) cd :: ys else y :: insert(cd, ys)
-    }
-
-    if (trees.length <= 2) trees
+    if (trees.length < 2) trees
     else {
       val firstElement = trees.head
       val secondElement = trees.tail.head
       val newFork = makeCodeTree(firstElement, secondElement)
-      print(trees.tail)
-      print("\n")
-      print(trees.tail.tail)
-      print("\n")
-      print( (newFork :: trees.tail.tail).sortWith( (x,y) => weight(x) <= weight(y) ) )
-      print("\n")
       (newFork :: trees.tail.tail).sortWith( (x,y) => weight(x) <= weight(y) )
     }
   }
@@ -154,7 +143,9 @@ object Huffman {
    *    the example invocation. Also define the return type of the `until` function.
    *  - try to find sensible parameter names for `xxx`, `yyy` and `zzz`.
    */
-  def until(xxx: ???, yyy: ???)(zzz: ???): ??? = ???
+  def until(sing: List[CodeTree] => Boolean, comb: List[CodeTree] =>  List[CodeTree])(trees: List[CodeTree]): List[CodeTree] = {
+    if (sing(trees)) trees else until(sing, comb)(comb(trees))
+  }
 
   /**
    * This function creates a code tree which is optimal to encode the text `chars`.
@@ -162,7 +153,9 @@ object Huffman {
    * The parameter `chars` is an arbitrary text. This function extracts the character
    * frequencies from that text and creates a code tree based on them.
    */
-  def createCodeTree(chars: List[Char]): CodeTree = ???
+  def createCodeTree(chars: List[Char]): CodeTree = {
+    until(singleton, combine)(makeOrderedLeafList(times(chars)))(0)
+  }
 
 
 
@@ -174,7 +167,19 @@ object Huffman {
    * This function decodes the bit sequence `bits` using the code tree `tree` and returns
    * the resulting list of characters.
    */
-  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = ???
+  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
+
+    def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = {
+      if (innerTree.isInstanceOf[Fork]) {
+        if (innerBits.head == 1) loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc)
+        else loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc)
+      } else {
+        if (innerBits.isEmpty) innerTree.asInstanceOf[Leaf].char :: acc
+        else loop(tree, innerBits, innerTree.asInstanceOf[Leaf].char :: acc)
+      }
+    }
+    loop(tree, bits, List[Char]())
+  }
 
   /**
    * A Huffman coding tree for the French language.
@@ -192,7 +197,9 @@ object Huffman {
   /**
    * Write a function that returns the decoded secret
    */
-  def decodedSecret: List[Char] = ???
+  def decodedSecret: List[Char] = {
+    decode(frenchCode, secret).toList
+  }
 
 
 
@@ -202,7 +209,40 @@ object Huffman {
    * This function encodes `text` using the code tree `tree`
    * into a sequence of bits.
    */
-  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = ???
+  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
+
+    def loop(tree: CodeTree, chars: List[Char], charList: List[Bit]): List[Bit] = {
+      if (chars.isEmpty)
+        charList
+      else {
+        if (tree.isInstanceOf[Fork]) {
+          val left = tree.asInstanceOf[Fork].left
+          val right = tree.asInstanceOf[Fork].right
+
+          if (left.isInstanceOf[Leaf] && left.asInstanceOf[Leaf].char == chars.head) {
+            println("found in left leaf " + chars.head)
+            loop(tree, chars.tail, 0 :: charList)
+          }
+          else if (left.isInstanceOf[Fork] && left.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
+            println("found in left fork " + chars.head)
+            loop(left.asInstanceOf[Fork].left, chars.tail, 0 :: charList)
+          }
+          else if (right.isInstanceOf[Leaf] && right.asInstanceOf[Leaf].char == chars.head) {
+            println("found in right leaf " + chars.head)
+            loop(tree, chars.tail, 1 :: charList)
+          }
+          else {
+            println("found in right fork" + chars.head)
+            loop(right.asInstanceOf[Fork], chars.tail, 1 :: charList)
+          }
+        } else {
+          println("found in last leaf " + chars.head)
+          loop(tree, chars.tail, charList)
+        }
+    }
+    }
+    loop(tree, text, List[Bit]())
+  }
 
 
   // Part 4b: Encoding using code table
