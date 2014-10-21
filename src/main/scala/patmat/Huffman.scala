@@ -169,29 +169,17 @@ object Huffman {
    */
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
 
-      def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = {
-        if (innerBits.isEmpty)
+    def loop(innerTree: CodeTree, innerBits: List[Bit], acc: List[Char]): List[Char] = innerTree match {
+      case Leaf(char, weight) => if (!innerBits.isEmpty) loop(tree, innerBits, acc :+ char) else acc :+ char
+      case Fork(left, right, chars, weight) => {
+        if (innerBits.size > 0) {
+          if (innerBits.head == 1) loop(right, innerBits.tail, acc) else loop(left, innerBits.tail, acc)
+        } else {
           acc
-        else if (innerTree.isInstanceOf[Leaf]) {
-          loop(tree, innerBits, acc :+ innerTree.asInstanceOf[Leaf].char)
-        }
-        else {
-          if (innerBits.head == 0) {
-            if (innerBits.size >= 2)
-              loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc)
-            else
-              loop(innerTree.asInstanceOf[Fork].left, innerBits.tail, acc :+ innerTree.asInstanceOf[Fork].left.asInstanceOf[Leaf].char)
-
-          } else {
-              if (innerBits.size >=2)
-                loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc)
-              else
-                loop(innerTree.asInstanceOf[Fork].right, innerBits.tail, acc :+ innerTree.asInstanceOf[Fork].right.asInstanceOf[Leaf].char)
-
-          }
         }
       }
-      loop(tree, bits, List[Char]())
+    }
+    loop(tree, bits, List[Char]())
   }
 
   /**
@@ -224,33 +212,19 @@ object Huffman {
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
 
-    def loop(tree: CodeTree, chars: List[Char], charList: List[Bit]): List[Bit] = {
-      if (chars.isEmpty)
-        charList
-      else {
-        if (tree.isInstanceOf[Fork]) {
-          val left = tree.asInstanceOf[Fork].left
-          val right = tree.asInstanceOf[Fork].right
-
-          if (left.isInstanceOf[Fork]) {
-            if (left.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
-              loop(left, chars, charList :+ 0)
-            } else {
-              loop(right, chars, charList :+ 1)
-            }
-          } else if (right.isInstanceOf[Fork]) {
-            if (right.asInstanceOf[Fork].chars.indexOf(chars.head) > -1) {
-              loop(right, chars, charList :+ 1)
-            } else {
-              loop(left, chars, charList :+ 0)
-            }
-          } else {
-              if (left.asInstanceOf[Leaf].char == chars.head) loop(tree, chars.tail, charList :+ 0)
-              else loop(tree, chars.tail, charList :+ 1)
-          }
-        } else {
-          loop(tree, chars.tail, charList)
-        }
+    def loop(innerTree: CodeTree, text: List[Char], acc: List[Bit]): List[Bit] = innerTree match {
+      case Leaf(char, weight) => if (text.isEmpty) acc else loop(tree, text.tail, acc)
+      case Fork(left, right, chars, weight) => {
+        if (text.isEmpty)
+          acc
+        else if (left.isInstanceOf[Fork] && left.asInstanceOf[Fork].chars.contains(text.head))
+          loop(left, text, acc :+  0)
+        else if (left.isInstanceOf[Leaf] && left.asInstanceOf[Leaf].char == text.head)
+          loop(tree, text.tail, acc :+ 0)
+        else if (right.isInstanceOf[Fork] && right.asInstanceOf[Fork].chars.contains(text.head))
+          loop(right, text, acc :+ 0)
+        else
+          loop(tree, text.tail, acc :+ 1)
       }
     }
     loop(tree, text, List[Bit]())
@@ -265,7 +239,10 @@ object Huffman {
    * This function returns the bit sequence that represents the character `char` in
    * the code table `table`.
    */
-  def codeBits(table: CodeTable)(char: Char): List[Bit] = ???
+  def codeBits(table: CodeTable)(char: Char): List[Bit] = table match {
+    case Nil => List[Bit]()
+    case y :: ys => if (y._1 == char) y._2 else codeBits(ys)(char)
+  }
 
   /**
    * Given a code tree, create a code table which contains, for every character in the
@@ -275,7 +252,14 @@ object Huffman {
    * a valid code tree that can be represented as a code table. Using the code tables of the
    * sub-trees, think of how to build the code table for the entire tree.
    */
-  def convert(tree: CodeTree): CodeTable = ???
+  def convert(tree: CodeTree): CodeTable = {
+
+    def loop(innerTree: CodeTree, acc: CodeTable): CodeTable = innerTree match {
+      case Leaf(char, weight) => List[(Char, List[Bit])](char, encode(tree)(List(char)))
+      case Fork(left, right, chars, weight) => Nil
+    }
+    loop(tree, List[(Char,List[Bit])]())
+  }
 
   /**
    * This function takes two code tables and merges them into one. Depending on how you
