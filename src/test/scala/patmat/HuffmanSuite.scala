@@ -47,8 +47,8 @@ class HuffmanSuite extends FunSuite {
     new TestTrees {
       assert(decode(t1, encode(t1)("ab".toList)) === "ab".toList)
       assert(decode(t2, encode(t2)("adbdabaaaadddddbbbabd".toList)) === "adbdabaaaadddddbbbabd".toList)
-      assert(decode(frenchCode, encode(frenchCode)("literature from 45BC making it over 2000 yearsold.".toList)) ===
-        "literature from 45BC making it over 2000 yearsold.".toList)
+      assert(decode(frenchCode, encode(frenchCode)("literaturefrommakingitoveryearsold".toList)) ===
+        "literaturefrommakingitoveryearsold".toList)
     }
   }
 
